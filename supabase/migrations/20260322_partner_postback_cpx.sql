@@ -61,6 +61,7 @@ declare
   v_trans_id text := trim(coalesce(p_trans_id, ''));
   v_event_type text := lower(trim(coalesce(p_event_type, 'complete')));
   v_existing public.partner_postback_events;
+  v_existing_found boolean := false;
   v_profile public.profiles;
   v_direct_referrer_id uuid;
   v_indirect_referrer_id uuid;
@@ -103,8 +104,10 @@ begin
     and trans_id = v_trans_id
   for update;
 
+  v_existing_found := found;
+
   if p_status = 1 then
-    if found and v_existing.task_revenue_event_id is not null and v_existing.reversed_at is null then
+    if v_existing_found and v_existing.task_revenue_event_id is not null and v_existing.reversed_at is null then
       return jsonb_build_object(
         'ok', true,
         'status', 'already_processed',
@@ -282,7 +285,7 @@ begin
       p_user_id
     );
 
-    if found then
+    if v_existing_found then
       update public.partner_postback_events
       set
         user_id = p_user_id,
@@ -363,7 +366,7 @@ begin
     );
   end if;
 
-  if not found then
+  if not v_existing_found then
     insert into public.partner_postback_events (
       partner_name,
       trans_id,
