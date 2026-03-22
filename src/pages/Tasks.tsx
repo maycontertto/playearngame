@@ -114,7 +114,6 @@ export default function Tasks() {
     const url = new URL(cpxWidgetUrl);
     url.searchParams.set('app_id', cpxAppId);
     url.searchParams.set('ext_user_id', sessionUserId);
-    url.searchParams.set('user_id', sessionUserId);
     url.searchParams.set('subid_1', sessionUserId);
     url.searchParams.set('subid_2', 'playgame-web');
     return url.toString();
@@ -268,7 +267,7 @@ export default function Tasks() {
           </div>
 
           <p className="text-[11px] text-muted-foreground">
-            A URL usa `app_id`, `ext_user_id`, `user_id` e `subid_1` com o mesmo UUID para facilitar o rastreio da conversão.
+            A URL usa `app_id`, `ext_user_id` e `subid_1` com o UUID do usuário para facilitar o rastreio da conversão sem depender de um `user_id` interno da CPX.
           </p>
         </div>
 
