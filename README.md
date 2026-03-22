@@ -8,6 +8,12 @@ Preencha o arquivo [.env.local](.env.local) com as chaves públicas do projeto:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+- `VITE_CPX_APP_ID`
+- `VITE_CPX_WIDGET_URL` (opcional, padrão `https://offers.cpx-research.com/index.php`)
+
+No ambiente do servidor/deploy, configure também:
+
+- `CPX_POSTBACK_SECRET`
 
 Use o arquivo [.env.example](.env.example) como referência.
 
@@ -19,6 +25,7 @@ O backend seguro foi preparado em duas migrations:
 - [supabase/migrations/20260322_admin_review_backend.sql](supabase/migrations/20260322_admin_review_backend.sql)
 - [supabase/migrations/20260322_referral_system.sql](supabase/migrations/20260322_referral_system.sql)
 - [supabase/migrations/20260322_referral_growth_antifraud.sql](supabase/migrations/20260322_referral_growth_antifraud.sql)
+- [supabase/migrations/20260322_partner_postback_cpx.sql](supabase/migrations/20260322_partner_postback_cpx.sql)
 
 Esse script cria:
 
@@ -38,9 +45,11 @@ Esse script cria:
 3. Depois execute [supabase/migrations/20260322_admin_review_backend.sql](supabase/migrations/20260322_admin_review_backend.sql).
 4. Depois execute [supabase/migrations/20260322_referral_system.sql](supabase/migrations/20260322_referral_system.sql).
 5. Depois execute [supabase/migrations/20260322_referral_growth_antifraud.sql](supabase/migrations/20260322_referral_growth_antifraud.sql).
-6. Em Authentication, ative Anonymous Sign-Ins, porque o app usa login anônimo.
+6. Depois execute [supabase/migrations/20260322_partner_postback_cpx.sql](supabase/migrations/20260322_partner_postback_cpx.sql).
 7. Copie a URL do projeto e a chave anon para [.env.local](.env.local).
-8. Rode o app normalmente.
+8. Preencha `VITE_CPX_APP_ID` para abrir a wall da CPX já com o UUID do usuário.
+9. Configure `CPX_POSTBACK_SECRET` no deploy para validar o hash do parceiro.
+10. Rode o app normalmente.
 
 ## Como liberar seu usuário como admin
 
@@ -70,6 +79,7 @@ set role = excluded.role,
 - indicação direta paga 3% da produção qualificada do indicado, sempre financiada pela margem do site para evitar payout acima de 100%.
 - indicação indireta paga 1% para o segundo nível, também financiada pela margem do site.
 - o sistema marca contas suspeitas por device fingerprint, velocidade de produção e saque precoce para revisão reforçada.
+- a tela de tarefas já possui um atalho para abrir a CPX com `user_id`, `ext_user_id` e `subid_1` preenchidos com o UUID real do usuário.
 
 ## Comandos
 

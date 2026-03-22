@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Play, CheckCircle2, Coins, Sparkles } from 'lucide-react';
+import { Play, CheckCircle2, Coins, Sparkles, ExternalLink, Copy } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { centsToBrl, useGameStore } from '@/stores/useGameStore';
 import { toast } from '@/components/ui/sonner';
 import type { TaskItem } from '@/stores/useGameStore';
 
 const AUTO_VIDEO_MODE_STORAGE_KEY = 'playgame_auto_video_mode';
+const cpxAppId = import.meta.env.VITE_CPX_APP_ID;
+const cpxWidgetUrl = import.meta.env.VITE_CPX_WIDGET_URL || 'https://offers.cpx-research.com/index.php';
 
 function getReadableError(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -89,7 +91,7 @@ function AdSimulator({
 }
 
 export default function Tasks() {
-  const { completeTask, tasks, economy, mode } = useGameStore();
+  const { completeTask, tasks, economy, mode, sessionUserId } = useGameStore();
   const [showAd, setShowAd] = useState<string | null>(null);
   const [autoVideoMode, setAutoVideoMode] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -105,6 +107,18 @@ export default function Tasks() {
     () => tasks.find(task => task.id === showAd) || null,
     [showAd, tasks],
   );
+
+  const cpxOfferwallUrl = useMemo(() => {
+    if (!sessionUserId || !cpxAppId) return null;
+
+    const url = new URL(cpxWidgetUrl);
+    url.searchParams.set('app_id', cpxAppId);
+    url.searchParams.set('ext_user_id', sessionUserId);
+    url.searchParams.set('user_id', sessionUserId);
+    url.searchParams.set('subid_1', sessionUserId);
+    url.searchParams.set('subid_2', 'playgame-web');
+    return url.toString();
+  }, [sessionUserId]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -132,6 +146,31 @@ export default function Tasks() {
 
       return next;
     });
+  };
+
+  const handleOpenCpx = () => {
+    if (!sessionUserId) {
+      toast.error('Sua sessão ainda não carregou. Tente novamente em alguns segundos.');
+      return;
+    }
+
+    if (!cpxAppId || !cpxOfferwallUrl) {
+      toast.error('Falta configurar o app_id da CPX no ambiente antes de abrir a wall.');
+      return;
+    }
+
+    window.open(cpxOfferwallUrl, '_blank', 'noopener,noreferrer');
+    toast.success('CPX aberta em uma nova aba com seu usuário identificado.');
+  };
+
+  const handleCopySessionUserId = async () => {
+    if (!sessionUserId) {
+      toast.error('Sua sessão ainda não está pronta para copiar o UUID.');
+      return;
+    }
+
+    await navigator.clipboard.writeText(sessionUserId);
+    toast.success('UUID do usuário copiado.');
   };
 
   const handleTaskAction = async (task: TaskItem) => {
@@ -194,6 +233,43 @@ export default function Tasks() {
         <div className="glass-card p-4 space-y-1" style={{ animation: 'slide-up 0.45s cubic-bezier(0.16,1,0.3,1) backwards', animationDelay: '40ms' }}>
           <p className="text-sm font-semibold">Retenção + receita</p>
           <p className="text-xs text-muted-foreground">Você está em <span className="text-primary font-medium">{mode === 'supabase' ? 'modo sincronizado' : 'modo local'}</span>. Cada tarefa validada envia {economy.userSharePct}% para o usuário e {economy.siteSharePct}% para o site. O saldo entra em saque só após {economy.settlementDays} dias.</p>
+        </div>
+
+        <div className="glass-card p-4 space-y-3" style={{ animation: 'slide-up 0.45s cubic-bezier(0.16,1,0.3,1) backwards', animationDelay: '55ms' }}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold">Ofertas CPX Research</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Abra a parede de pesquisas/ofertas já identificada com o UUID do usuário para receber o postback automático.
+              </p>
+            </div>
+            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${cpxAppId ? 'bg-accent/10 text-accent' : 'bg-game-orange/10 text-game-orange'}`}>
+              {cpxAppId ? 'CPX pronta' : 'Falta app_id'}
+            </span>
+          </div>
+
+          <div className="rounded-xl bg-secondary p-3 text-[11px] font-mono break-all text-muted-foreground">
+            {sessionUserId || 'Carregando UUID do usuário...'}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={handleCopySessionUserId}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-secondary px-3 py-3 text-xs font-medium"
+            >
+              <Copy className="h-4 w-4" /> Copiar UUID
+            </button>
+            <button
+              onClick={handleOpenCpx}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-3 text-xs font-semibold text-primary-foreground"
+            >
+              <ExternalLink className="h-4 w-4" /> Abrir CPX
+            </button>
+          </div>
+
+          <p className="text-[11px] text-muted-foreground">
+            A URL usa `app_id`, `ext_user_id`, `user_id` e `subid_1` com o mesmo UUID para facilitar o rastreio da conversão.
+          </p>
         </div>
 
         <div className="glass-card p-4 space-y-3" style={{ animation: 'slide-up 0.45s cubic-bezier(0.16,1,0.3,1) backwards', animationDelay: '70ms' }}>
