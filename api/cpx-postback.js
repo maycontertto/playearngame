@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+import crypto from 'node:crypto';
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -36,7 +36,7 @@ function sendJson(response, status, body) {
   response.end(JSON.stringify(body));
 }
 
-module.exports = async function handler(request, response) {
+export default async function handler(request, response) {
   if (!supabaseUrl || !supabaseAnonKey) {
     return sendJson(response, 500, {
       ok: false,
@@ -109,4 +109,4 @@ module.exports = async function handler(request, response) {
     provider: 'cpx_research',
     result,
   });
-};
+}
