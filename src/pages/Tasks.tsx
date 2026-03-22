@@ -1,27 +1,63 @@
-import { useState } from 'react';
-import { Play, CheckCircle2, Coins } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Play, CheckCircle2, Coins, Sparkles } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { centsToBrl, useGameStore } from '@/stores/useGameStore';
+import { toast } from '@/components/ui/sonner';
 import type { TaskItem } from '@/stores/useGameStore';
 
-function AdSimulator({ onComplete }: { onComplete: () => void }) {
+const AUTO_VIDEO_MODE_STORAGE_KEY = 'playgame_auto_video_mode';
+
+function getReadableError(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return 'Não foi possível concluir o vídeo remunerado agora.';
+}
+
+function AdSimulator({
+  title,
+  autoStart = false,
+  onComplete,
+}: {
+  title: string;
+  autoStart?: boolean;
+  onComplete: () => void;
+}) {
   const [progress, setProgress] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const intervalRef = useRef<number | null>(null);
 
-  const startAd = () => {
+  const stopCurrentInterval = useCallback(() => {
+    if (intervalRef.current !== null) {
+      window.clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  const startAd = useCallback(() => {
+    if (playing) return;
+
     setPlaying(true);
     setProgress(0);
-    const interval = setInterval(() => {
+    stopCurrentInterval();
+
+    intervalRef.current = window.setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
-          clearInterval(interval);
+          stopCurrentInterval();
           onComplete();
           return 100;
         }
         return prev + 5;
       });
     }, 150);
-  };
+  }, [onComplete, playing, stopCurrentInterval]);
+
+  useEffect(() => {
+    if (autoStart) {
+      startAd();
+    }
+  }, [autoStart, startAd]);
+
+  useEffect(() => () => stopCurrentInterval(), [stopCurrentInterval]);
 
   if (!playing) {
     return (
@@ -30,6 +66,7 @@ function AdSimulator({ onComplete }: { onComplete: () => void }) {
           <Play className="w-8 h-8 text-primary" />
         </div>
         <span className="text-sm font-medium">Assistir e Ganhar</span>
+        <span className="text-xs text-muted-foreground text-center">{title}</span>
       </button>
     );
   }
@@ -37,9 +74,10 @@ function AdSimulator({ onComplete }: { onComplete: () => void }) {
   return (
     <div className="glass-card p-6 space-y-3">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Assistindo anúncio...</span>
+        <span>Assistindo vídeo remunerado...</span>
         <span>{Math.min(progress, 100)}%</span>
       </div>
+      <p className="text-sm font-medium">{title}</p>
       <div className="h-2 rounded-full bg-secondary overflow-hidden">
         <div className="h-full rounded-full bg-primary transition-all duration-150" style={{ width: `${progress}%` }} />
       </div>
@@ -53,6 +91,48 @@ function AdSimulator({ onComplete }: { onComplete: () => void }) {
 export default function Tasks() {
   const { completeTask, tasks, economy, mode } = useGameStore();
   const [showAd, setShowAd] = useState<string | null>(null);
+  const [autoVideoMode, setAutoVideoMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(AUTO_VIDEO_MODE_STORAGE_KEY) === 'true';
+  });
+
+  const availableAdTasks = useMemo(
+    () => tasks.filter(task => task.type === 'ad' && !task.completed),
+    [tasks],
+  );
+
+  const activeAdTask = useMemo(
+    () => tasks.find(task => task.id === showAd) || null,
+    [showAd, tasks],
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(AUTO_VIDEO_MODE_STORAGE_KEY, String(autoVideoMode));
+  }, [autoVideoMode]);
+
+  useEffect(() => {
+    if (!autoVideoMode || showAd || !availableAdTasks.length) return;
+    setShowAd(availableAdTasks[0].id);
+  }, [autoVideoMode, availableAdTasks, showAd]);
+
+  const toggleAutoVideoMode = () => {
+    setAutoVideoMode(previous => {
+      const next = !previous;
+
+      if (next) {
+        if (availableAdTasks.length) {
+          toast.success('Modo contínuo ativado. O próximo vídeo remunerado vai iniciar sozinho.');
+        } else {
+          toast.info('Modo contínuo ativado. Quando houver vídeo remunerado liberado, ele inicia automaticamente.');
+        }
+      } else {
+        toast.message('Modo contínuo desativado.');
+      }
+
+      return next;
+    });
+  };
 
   const handleTaskAction = async (task: TaskItem) => {
     if (task.completed) return;
@@ -70,14 +150,36 @@ export default function Tasks() {
 
   const handleAdComplete = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
-    if (task) {
+    if (!task) {
+      setShowAd(null);
+      return;
+    }
+
+    try {
       await completeTask(task.points, {
         taskId: task.id,
         taskType: task.type,
         title: task.title,
         estimatedRevenueCents: task.estimatedRevenueCents,
       });
-      setTimeout(() => setShowAd(null), 1500);
+
+      toast.success(`Vídeo concluído: +${task.points} pontos liberados.`);
+
+      const nextAdTask = tasks.find(candidate => candidate.type === 'ad' && !candidate.completed && candidate.id !== task.id);
+
+      if (autoVideoMode && nextAdTask) {
+        window.setTimeout(() => setShowAd(nextAdTask.id), 900);
+        return;
+      }
+
+      if (autoVideoMode && !nextAdTask) {
+        toast.message('Todos os vídeos remunerados liberados por hoje já foram concluídos.');
+      }
+
+      window.setTimeout(() => setShowAd(null), 1200);
+    } catch (error) {
+      toast.error(getReadableError(error));
+      setShowAd(null);
     }
   };
 
@@ -94,9 +196,46 @@ export default function Tasks() {
           <p className="text-xs text-muted-foreground">Você está em <span className="text-primary font-medium">{mode === 'supabase' ? 'modo sincronizado' : 'modo local'}</span>. Cada tarefa validada envia {economy.userSharePct}% para o usuário e {economy.siteSharePct}% para o site. O saldo entra em saque só após {economy.settlementDays} dias.</p>
         </div>
 
-        {showAd && (
+        <div className="glass-card p-4 space-y-3" style={{ animation: 'slide-up 0.45s cubic-bezier(0.16,1,0.3,1) backwards', animationDelay: '70ms' }}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" /> Modo contínuo de vídeos
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Deixe ativado para abrir automaticamente o próximo vídeo remunerado enquanto houver inventário liberado.
+              </p>
+            </div>
+            <button
+              onClick={toggleAutoVideoMode}
+              className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                autoVideoMode ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+              }`}
+            >
+              {autoVideoMode ? 'Ligado' : 'Desligado'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-xl bg-secondary p-3">
+              <p className="text-muted-foreground">Vídeos liberados</p>
+              <p className="font-semibold text-primary">{availableAdTasks.length}</p>
+            </div>
+            <div className="rounded-xl bg-secondary p-3">
+              <p className="text-muted-foreground">Próximo status</p>
+              <p className="font-semibold">{autoVideoMode ? 'Auto iniciar' : 'Manual'}</p>
+            </div>
+          </div>
+        </div>
+
+        {showAd && activeAdTask && (
           <div style={{ animation: 'slide-up 0.4s cubic-bezier(0.16,1,0.3,1)' }}>
-            <AdSimulator onComplete={() => handleAdComplete(showAd)} />
+            <AdSimulator
+              key={showAd}
+              title={activeAdTask.title}
+              autoStart={autoVideoMode}
+              onComplete={() => handleAdComplete(showAd)}
+            />
           </div>
         )}
 
