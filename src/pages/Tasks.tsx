@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Play, CheckCircle2, Coins, Sparkles, ExternalLink, Copy } from 'lucide-react';
+import { Play, CheckCircle2, Coins, Sparkles, ExternalLink, Copy, Link as LinkIcon } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { centsToBrl, useGameStore } from '@/stores/useGameStore';
 import { toast } from '@/components/ui/sonner';
 import type { TaskItem } from '@/stores/useGameStore';
 
 const AUTO_VIDEO_MODE_STORAGE_KEY = 'playgame_auto_video_mode';
-const cpxAppId = import.meta.env.VITE_CPX_APP_ID;
-const cpxWidgetUrl = import.meta.env.VITE_CPX_WIDGET_URL || 'https://offers.cpx-research.com/index.php';
-
 function getReadableError(error: unknown) {
   if (error instanceof Error) return error.message;
   return 'Não foi possível concluir o vídeo remunerado agora.';
@@ -108,11 +105,10 @@ export default function Tasks() {
     [showAd, tasks],
   );
 
-  const cpxOfferwallUrl = useMemo(() => {
-    if (!sessionUserId || !cpxAppId) return null;
+  const cpxEntryUrl = useMemo(() => {
+    if (!sessionUserId) return null;
 
-    const url = new URL(cpxWidgetUrl);
-    url.searchParams.set('app_id', cpxAppId);
+    const url = new URL('/api/cpx-entry', window.location.origin);
     url.searchParams.set('ext_user_id', sessionUserId);
     url.searchParams.set('subid_1', sessionUserId);
     url.searchParams.set('subid_2', 'playgame-web');
@@ -153,13 +149,23 @@ export default function Tasks() {
       return;
     }
 
-    if (!cpxAppId || !cpxOfferwallUrl) {
-      toast.error('Falta configurar o app_id da CPX no ambiente antes de abrir a wall.');
+    if (!cpxEntryUrl) {
+      toast.error('Não foi possível preparar o link de entrada da CPX.');
       return;
     }
 
-    window.open(cpxOfferwallUrl, '_blank', 'noopener,noreferrer');
+    window.open(cpxEntryUrl, '_blank', 'noopener,noreferrer');
     toast.success('CPX aberta em uma nova aba com seu usuário identificado.');
+  };
+
+  const handleCopyCpxLink = async () => {
+    if (!cpxEntryUrl) {
+      toast.error('O link da CPX ainda não está disponível.');
+      return;
+    }
+
+    await navigator.clipboard.writeText(cpxEntryUrl);
+    toast.success('Link de entrada da CPX copiado.');
   };
 
   const handleCopySessionUserId = async () => {
@@ -242,8 +248,8 @@ export default function Tasks() {
                 Abra a parede de pesquisas/ofertas já identificada com o UUID do usuário para receber o postback automático.
               </p>
             </div>
-            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${cpxAppId ? 'bg-accent/10 text-accent' : 'bg-game-orange/10 text-game-orange'}`}>
-              {cpxAppId ? 'CPX pronta' : 'Falta app_id'}
+            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${cpxEntryUrl ? 'bg-accent/10 text-accent' : 'bg-game-orange/10 text-game-orange'}`}>
+              {cpxEntryUrl ? 'CPX pronta' : 'Sessão pendente'}
             </span>
           </div>
 
@@ -251,12 +257,22 @@ export default function Tasks() {
             {sessionUserId || 'Carregando UUID do usuário...'}
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl bg-secondary p-3 text-[11px] break-all text-muted-foreground">
+            {cpxEntryUrl || 'Link de entrada da CPX será gerado assim que a sessão carregar.'}
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
             <button
               onClick={handleCopySessionUserId}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-secondary px-3 py-3 text-xs font-medium"
             >
               <Copy className="h-4 w-4" /> Copiar UUID
+            </button>
+            <button
+              onClick={handleCopyCpxLink}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-secondary px-3 py-3 text-xs font-medium"
+            >
+              <LinkIcon className="h-4 w-4" /> Copiar link
             </button>
             <button
               onClick={handleOpenCpx}
@@ -267,7 +283,7 @@ export default function Tasks() {
           </div>
 
           <p className="text-[11px] text-muted-foreground">
-            A URL usa `app_id`, `ext_user_id` e `subid_1` com o UUID do usuário para facilitar o rastreio da conversão sem depender de um `user_id` interno da CPX.
+            O app agora usa um redirecionamento interno para a CPX e envia `ext_user_id` e `subid_1` com o UUID do usuário, evitando erro por parâmetro incorreto na abertura da wall.
           </p>
         </div>
 
