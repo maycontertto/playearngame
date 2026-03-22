@@ -14,6 +14,13 @@ Preencha o arquivo [.env.local](.env.local) com as chaves públicas do projeto:
 No ambiente do servidor/deploy, configure também:
 
 - `CPX_POSTBACK_SECRET`
+- `BITLABS_OFFERWALL_TOKEN`
+- `BITLABS_APP_SECRET`
+- `BITLABS_WIDGET_URL` (opcional, padrão `https://web.bitlabs.ai/`)
+- `BITLABS_AMOUNT_MODE` (`currency` para usar o valor enviado em `VAL`, ou `usd` para converter `USD` em BRL)
+- `BITLABS_USD_TO_BRL_RATE` (necessário quando usar base em USD)
+- `BITLABS_DISPLAY_MODE` (opcional)
+- `BITLABS_THEME` (opcional)
 
 Use o arquivo [.env.example](.env.example) como referência.
 
@@ -26,6 +33,7 @@ O backend seguro foi preparado em duas migrations:
 - [supabase/migrations/20260322_referral_system.sql](supabase/migrations/20260322_referral_system.sql)
 - [supabase/migrations/20260322_referral_growth_antifraud.sql](supabase/migrations/20260322_referral_growth_antifraud.sql)
 - [supabase/migrations/20260322_partner_postback_cpx.sql](supabase/migrations/20260322_partner_postback_cpx.sql)
+- [supabase/migrations/20260322_partner_postback_bitlabs_support.sql](supabase/migrations/20260322_partner_postback_bitlabs_support.sql)
 
 Esse script cria:
 
@@ -46,10 +54,13 @@ Esse script cria:
 4. Depois execute [supabase/migrations/20260322_referral_system.sql](supabase/migrations/20260322_referral_system.sql).
 5. Depois execute [supabase/migrations/20260322_referral_growth_antifraud.sql](supabase/migrations/20260322_referral_growth_antifraud.sql).
 6. Depois execute [supabase/migrations/20260322_partner_postback_cpx.sql](supabase/migrations/20260322_partner_postback_cpx.sql).
-7. Copie a URL do projeto e a chave anon para [.env.local](.env.local).
-8. Preencha `VITE_CPX_APP_ID` para abrir a wall da CPX já com o UUID do usuário.
-9. Configure `CPX_POSTBACK_SECRET` no deploy para validar o hash do parceiro.
-10. Rode o app normalmente.
+7. Depois execute [supabase/migrations/20260322_partner_postback_bitlabs_support.sql](supabase/migrations/20260322_partner_postback_bitlabs_support.sql).
+8. Copie a URL do projeto e a chave anon para [.env.local](.env.local).
+9. Preencha `VITE_CPX_APP_ID` para abrir a wall da CPX já com o UUID do usuário.
+10. Configure `CPX_POSTBACK_SECRET` no deploy para validar o hash da CPX.
+11. Configure `BITLABS_OFFERWALL_TOKEN` e `BITLABS_APP_SECRET` no deploy para liberar a BitLabs.
+12. Se quiser usar o payout em USD como base financeira da BitLabs, defina `BITLABS_AMOUNT_MODE=usd` e `BITLABS_USD_TO_BRL_RATE=5.00` (ou a cotação que preferir).
+13. Rode o app normalmente.
 
 ## Como liberar seu usuário como admin
 
@@ -79,7 +90,34 @@ set role = excluded.role,
 - indicação direta paga 3% da produção qualificada do indicado, sempre financiada pela margem do site para evitar payout acima de 100%.
 - indicação indireta paga 1% para o segundo nível, também financiada pela margem do site.
 - o sistema marca contas suspeitas por device fingerprint, velocidade de produção e saque precoce para revisão reforçada.
-- a tela de tarefas já possui um atalho para abrir a CPX com `user_id`, `ext_user_id` e `subid_1` preenchidos com o UUID real do usuário.
+- a tela de tarefas já possui atalhos para abrir a CPX e a BitLabs com identificação automática do UUID real do usuário.
+
+## BitLabs
+
+### Abertura da wall
+
+- rota interna de abertura: [api/bitlabs-entry.js](api/bitlabs-entry.js)
+- destino padrão: `https://web.bitlabs.ai/?uid=SEU_UUID&token=SEU_TOKEN`
+
+### Callback recomendado
+
+Configure a BitLabs para enviar callbacks para:
+
+- `https://playearngame-sigma.vercel.app/api/bitlabs-postback`
+
+Parâmetros recomendados no dashboard da BitLabs:
+
+- `uid=[%USER:UID%]`
+- `tx=[%TX%]`
+- `val=[%VALUE:CURRENCY%]`
+- `usd=[%VALUE:USD%]`
+- `raw=[%RAW%]`
+- `type=[%ACTIVITY:TYPE%]`
+- `offer_id=[%OFFER:ID%]`
+- `offer_name=[%OFFER:NAME%]`
+- `task_name=[%OFFER:TASK:NAME%]`
+
+O endpoint [api/bitlabs-postback.js](api/bitlabs-postback.js) valida o `hash` HMAC SHA-1 com `BITLABS_APP_SECRET` e envia a conversão para a RPC `process_partner_postback` no Supabase.
 
 ## Comandos
 

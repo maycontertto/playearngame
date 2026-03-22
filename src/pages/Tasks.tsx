@@ -115,6 +115,14 @@ export default function Tasks() {
     return url.toString();
   }, [sessionUserId]);
 
+  const bitlabsEntryUrl = useMemo(() => {
+    if (!sessionUserId) return null;
+
+    const url = new URL('/api/bitlabs-entry', window.location.origin);
+    url.searchParams.set('uid', sessionUserId);
+    return url.toString();
+  }, [sessionUserId]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(AUTO_VIDEO_MODE_STORAGE_KEY, String(autoVideoMode));
@@ -143,29 +151,45 @@ export default function Tasks() {
     });
   };
 
-  const handleOpenCpx = () => {
+  const openPartnerWall = (partnerName: string, url: string | null, errorMessage: string) => {
     if (!sessionUserId) {
       toast.error('Sua sessão ainda não carregou. Tente novamente em alguns segundos.');
       return;
     }
 
-    if (!cpxEntryUrl) {
-      toast.error('Não foi possível preparar o link de entrada da CPX.');
+    if (!url) {
+      toast.error(errorMessage);
       return;
     }
 
-    window.open(cpxEntryUrl, '_blank', 'noopener,noreferrer');
-    toast.success('CPX aberta em uma nova aba com seu usuário identificado.');
+    window.open(url, '_blank', 'noopener,noreferrer');
+    toast.success(`${partnerName} aberta em uma nova aba com seu usuário identificado.`);
+  };
+
+  const copyPartnerLink = async (url: string | null, label: string) => {
+    if (!url) {
+      toast.error(`O link da ${label} ainda não está disponível.`);
+      return;
+    }
+
+    await navigator.clipboard.writeText(url);
+    toast.success(`Link de entrada da ${label} copiado.`);
+  };
+
+  const handleOpenCpx = () => {
+    openPartnerWall('CPX', cpxEntryUrl, 'Não foi possível preparar o link de entrada da CPX.');
+  };
+
+  const handleOpenBitLabs = () => {
+    openPartnerWall('BitLabs', bitlabsEntryUrl, 'Não foi possível preparar o link de entrada da BitLabs.');
   };
 
   const handleCopyCpxLink = async () => {
-    if (!cpxEntryUrl) {
-      toast.error('O link da CPX ainda não está disponível.');
-      return;
-    }
+    await copyPartnerLink(cpxEntryUrl, 'CPX');
+  };
 
-    await navigator.clipboard.writeText(cpxEntryUrl);
-    toast.success('Link de entrada da CPX copiado.');
+  const handleCopyBitLabsLink = async () => {
+    await copyPartnerLink(bitlabsEntryUrl, 'BitLabs');
   };
 
   const handleCopySessionUserId = async () => {
@@ -329,6 +353,86 @@ export default function Tasks() {
                 </div>
                 <p className="text-[11px] text-muted-foreground">
                   A abertura usa um redirecionamento interno seguro para identificar seu usuário automaticamente antes de enviar você para a CPX.
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div className="glass-card overflow-hidden p-0" style={{ animation: 'slide-up 0.45s cubic-bezier(0.16,1,0.3,1) backwards', animationDelay: '63ms' }}>
+          <div className="bg-gradient-to-br from-accent/15 via-primary/5 to-transparent p-4 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-2">
+                <span className="inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
+                  <Sparkles className="h-3.5 w-3.5" /> Novo parceiro
+                </span>
+                <div>
+                  <p className="text-lg font-bold leading-tight">BitLabs ofertas e pesquisas</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Libere campanhas extras com jogos, pesquisas e missões que podem aumentar seu faturamento diário dentro do app.
+                  </p>
+                </div>
+              </div>
+              <span className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-semibold ${bitlabsEntryUrl ? 'bg-accent/10 text-accent' : 'bg-game-orange/10 text-game-orange'}`}>
+                {bitlabsEntryUrl ? 'BitLabs pronta' : 'Configurando'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-xl bg-background/70 p-3">
+                <p className="text-muted-foreground">Formato</p>
+                <p className="mt-1 font-semibold">Jogos + pesquisas</p>
+              </div>
+              <div className="rounded-xl bg-background/70 p-3">
+                <p className="text-muted-foreground">Identificação</p>
+                <p className="mt-1 font-semibold">UID automático</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-accent/15 bg-background/70 p-4 shadow-sm">
+              <p className="text-sm font-semibold">Pronta para integração com callback seguro</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                A abertura usa um link interno do app para enviar seu usuário com segurança e receber as conversões pelo backend.
+              </p>
+            </div>
+
+            <button
+              onClick={handleOpenBitLabs}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-4 text-sm font-semibold text-accent-foreground shadow-lg shadow-accent/20 transition-transform active:scale-[0.98]"
+            >
+              <ExternalLink className="h-4 w-4" /> Abrir BitLabs agora
+            </button>
+          </div>
+
+          <div className="border-t border-border/60 p-4 space-y-3 bg-background/40">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={handleCopySessionUserId}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-secondary px-3 py-3 text-xs font-medium"
+              >
+                <Copy className="h-4 w-4" /> Copiar UID
+              </button>
+              <button
+                onClick={handleCopyBitLabsLink}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-secondary px-3 py-3 text-xs font-medium"
+              >
+                <LinkIcon className="h-4 w-4" /> Copiar link
+              </button>
+            </div>
+
+            <details className="rounded-xl bg-secondary/80 p-3 text-xs text-muted-foreground">
+              <summary className="cursor-pointer list-none font-medium text-foreground">
+                Ver detalhes da BitLabs
+              </summary>
+              <div className="mt-3 space-y-2">
+                <div className="rounded-lg bg-background/70 p-3 text-[11px] font-mono break-all">
+                  {sessionUserId || 'Carregando UID do usuário...'}
+                </div>
+                <div className="rounded-lg bg-background/70 p-3 text-[11px] break-all">
+                  {bitlabsEntryUrl || 'Link de entrada da BitLabs será gerado assim que a sessão carregar.'}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  A BitLabs usa o parâmetro `uid` com o UUID do usuário, via redirecionamento interno do app.
                 </p>
               </div>
             </details>
