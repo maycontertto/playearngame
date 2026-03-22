@@ -37,76 +37,83 @@ function sendJson(response, status, body) {
 }
 
 export default async function handler(request, response) {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return sendJson(response, 500, {
-      ok: false,
-      error: 'Supabase não configurado no servidor.',
-    });
-  }
-
-  const params = request.method === 'POST'
-    ? { ...(request.query || {}), ...(request.body || {}) }
-    : (request.query || {});
-
-  const payload = getPayload(params);
-
-  if (!payload.transId || !payload.userId || ![1, 2].includes(payload.status)) {
-    return sendJson(response, 400, {
-      ok: false,
-      error: 'Parâmetros obrigatórios ausentes: status, trans_id e user_id.',
-    });
-  }
-
-  if (cpxPostbackSecret && payload.hash) {
-    const expectedHash = crypto
-      .createHash('md5')
-      .update(`${payload.transId}-${cpxPostbackSecret}`)
-      .digest('hex');
-
-    if (expectedHash !== payload.hash) {
-      return sendJson(response, 401, {
+  try {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return sendJson(response, 500, {
         ok: false,
-        error: 'Hash de segurança inválido.',
+        error: 'Supabase não configurado no servidor.',
       });
     }
-  }
 
-  const rpcResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/process_partner_postback`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
-    },
-    body: JSON.stringify({
-      p_partner_name: 'cpx_research',
-      p_trans_id: payload.transId,
-      p_user_id: payload.userId,
-      p_status: payload.status,
-      p_amount_local: payload.amountLocal,
-      p_amount_usd: payload.amountUsd,
-      p_event_type: payload.type,
-      p_offer_id: payload.offerId,
-      p_subid_1: payload.subid1,
-      p_subid_2: payload.subid2,
-      p_ip_click: payload.ipClick,
-      p_raw_payload: params,
-    }),
-  });
+    const params = request.method === 'POST'
+      ? { ...(request.query || {}), ...(request.body || {}) }
+      : (request.query || {});
 
-  const result = await rpcResponse.json().catch(() => null);
+    const payload = getPayload(params);
 
-  if (!rpcResponse.ok) {
+    if (!payload.transId || !payload.userId || ![1, 2].includes(payload.status)) {
+      return sendJson(response, 400, {
+        ok: false,
+        error: 'Parâmetros obrigatórios ausentes: status, trans_id e user_id.',
+      });
+    }
+
+    if (cpxPostbackSecret && payload.hash) {
+      const expectedHash = crypto
+        .createHash('md5')
+        .update(`${payload.transId}-${cpxPostbackSecret}`)
+        .digest('hex');
+
+      if (expectedHash !== payload.hash) {
+        return sendJson(response, 401, {
+          ok: false,
+          error: 'Hash de segurança inválido.',
+        });
+      }
+    }
+
+    const rpcResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/process_partner_postback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${supabaseAnonKey}`,
+      },
+      body: JSON.stringify({
+        p_partner_name: 'cpx_research',
+        p_trans_id: payload.transId,
+        p_user_id: payload.userId,
+        p_status: payload.status,
+        p_amount_local: payload.amountLocal,
+        p_amount_usd: payload.amountUsd,
+        p_event_type: payload.type,
+        p_offer_id: payload.offerId,
+        p_subid_1: payload.subid1,
+        p_subid_2: payload.subid2,
+        p_ip_click: payload.ipClick,
+        p_raw_payload: params,
+      }),
+    });
+
+    const result = await rpcResponse.json().catch(() => null);
+
+    if (!rpcResponse.ok) {
+      return sendJson(response, 500, {
+        ok: false,
+        error: 'Falha ao processar o postback no Supabase.',
+        details: result,
+      });
+    }
+
+    return sendJson(response, 200, {
+      ok: true,
+      provider: 'cpx_research',
+      result,
+    });
+  } catch (error) {
     return sendJson(response, 500, {
       ok: false,
-      error: 'Falha ao processar o postback no Supabase.',
-      details: result,
+      error: error instanceof Error ? error.message : 'Falha inesperada no endpoint de postback.',
     });
   }
-
-  return sendJson(response, 200, {
-    ok: true,
-    provider: 'cpx_research',
-    result,
-  });
 }
