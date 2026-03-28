@@ -4,8 +4,11 @@ import XPBar from '@/components/ui/XPBar';
 import PointsBadge from '@/components/ui/PointsBadge';
 import AppLayout from '@/components/layout/AppLayout';
 import { toast } from '@/components/ui/sonner';
+import AdSenseUnit from '@/components/ui/AdSenseUnit';
 import { useNavigate } from 'react-router-dom';
 import type { MissionItem } from '@/stores/useGameStore';
+
+const dashboardAdSlot = import.meta.env.VITE_ADSENSE_SLOT_DASHBOARD;
 
 function DailyBonus({ onClaim, claimed }: { onClaim: () => number; claimed: boolean }) {
   const reward = claimed ? 'Recompensa diária recebida' : 'Toque para abrir sua recompensa';
@@ -200,6 +203,15 @@ export default function Dashboard() {
         {/* Daily Missions */}
         <div style={{ animation: 'slide-up 0.55s cubic-bezier(0.16,1,0.3,1) backwards', animationDelay: '240ms' }}>
           <DailyMissions missions={missions} />
+        </div>
+
+        <div style={{ animation: 'slide-up 0.55s cubic-bezier(0.16,1,0.3,1) backwards', animationDelay: '260ms' }}>
+          <AdSenseUnit
+            slot={dashboardAdSlot}
+            title="Ofertas patrocinadas"
+            description="Espaço de publicidade automática para monetização do app."
+            minHeight={140}
+          />
         </div>
 
         <div className="glass-card p-4 space-y-2" style={{ animation: 'slide-up 0.55s cubic-bezier(0.16,1,0.3,1) backwards', animationDelay: '280ms' }}>

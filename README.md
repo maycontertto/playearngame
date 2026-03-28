@@ -8,6 +8,8 @@ Preencha o arquivo [.env.local](.env.local) com as chaves públicas do projeto:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+- `VITE_ADSENSE_SLOT_DASHBOARD`
+- `VITE_ADSENSE_SLOT_TASKS`
 - `VITE_CPX_APP_ID`
 - `VITE_CPX_WIDGET_URL` (opcional, padrão `https://offers.cpx-research.com/index.php`)
 

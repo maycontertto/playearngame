@@ -3,9 +3,12 @@ import { Play, CheckCircle2, Coins, Sparkles, ExternalLink, Copy, Link as LinkIc
 import AppLayout from '@/components/layout/AppLayout';
 import { centsToBrl, useGameStore } from '@/stores/useGameStore';
 import { toast } from '@/components/ui/sonner';
+import AdSenseUnit from '@/components/ui/AdSenseUnit';
 import type { TaskItem } from '@/stores/useGameStore';
 
 const AUTO_VIDEO_MODE_STORAGE_KEY = 'playgame_auto_video_mode';
+const tasksAdSlot = import.meta.env.VITE_ADSENSE_SLOT_TASKS;
+
 function getReadableError(error: unknown) {
   if (error instanceof Error) return error.message;
   return 'Não foi possível concluir o vídeo remunerado agora.';
@@ -469,6 +472,15 @@ export default function Tasks() {
               <p className="font-semibold">{autoVideoMode ? 'Auto iniciar' : 'Manual'}</p>
             </div>
           </div>
+        </div>
+
+        <div style={{ animation: 'slide-up 0.45s cubic-bezier(0.16,1,0.3,1) backwards', animationDelay: '78ms' }}>
+          <AdSenseUnit
+            slot={tasksAdSlot}
+            title="Publicidade em destaque"
+            description="Anúncios automáticos exibidos entre as tarefas do app."
+            minHeight={160}
+          />
         </div>
 
         {showAd && activeAdTask && (
