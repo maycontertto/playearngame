@@ -22,8 +22,9 @@ export default function AdSenseUnit({
   minHeight = 120,
 }: AdSenseUnitProps) {
   const adRef = useRef<HTMLModElement | null>(null);
+  const normalizedSlot = slot?.trim();
 
-  const canRenderAd = useMemo(() => Boolean(slot), [slot]);
+  const canRenderAd = useMemo(() => Boolean(normalizedSlot), [normalizedSlot]);
 
   useEffect(() => {
     if (!canRenderAd || !adRef.current) return;
@@ -55,7 +56,7 @@ export default function AdSenseUnit({
             className="adsbygoogle block overflow-hidden rounded-xl"
             style={{ display: 'block', minHeight }}
             data-ad-client={ADSENSE_CLIENT}
-            data-ad-slot={slot}
+            data-ad-slot={normalizedSlot}
             data-ad-format="auto"
             data-full-width-responsive="true"
           />
