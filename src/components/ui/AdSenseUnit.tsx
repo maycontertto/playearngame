@@ -11,6 +11,8 @@ type AdSenseUnitProps = {
   title?: string;
   description?: string;
   minHeight?: number;
+  format?: 'auto' | 'fluid';
+  layoutKey?: string;
 };
 
 const ADSENSE_CLIENT = 'ca-pub-5318030852303688';
@@ -20,6 +22,8 @@ export default function AdSenseUnit({
   title = 'Espaço patrocinado',
   description = 'Publicidade exibida pelo Google AdSense.',
   minHeight = 120,
+  format = 'auto',
+  layoutKey,
 }: AdSenseUnitProps) {
   const adRef = useRef<HTMLModElement | null>(null);
   const normalizedSlot = slot?.trim();
@@ -57,7 +61,8 @@ export default function AdSenseUnit({
             style={{ display: 'block', minHeight }}
             data-ad-client={ADSENSE_CLIENT}
             data-ad-slot={normalizedSlot}
-            data-ad-format="auto"
+            data-ad-format={format}
+            data-ad-layout-key={layoutKey}
             data-full-width-responsive="true"
           />
         ) : (

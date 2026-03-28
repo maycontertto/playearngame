@@ -1,7 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { Disc3, MousePointerClick, Brain, ChevronRight } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
+import AdSenseUnit from '@/components/ui/AdSenseUnit';
 import { useGameStore } from '@/stores/useGameStore';
+
+const gamesFluidAdSlot = '3236664978';
+const gamesFluidLayoutKey = '-fb+5w+4e-db+86';
 
 const games = [
   {
@@ -60,6 +64,17 @@ export default function Games() {
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </button>
           ))}
+        </div>
+
+        <div style={{ animation: 'slide-up 0.5s cubic-bezier(0.16,1,0.3,1) backwards', animationDelay: '260ms' }}>
+          <AdSenseUnit
+            slot={gamesFluidAdSlot}
+            format="fluid"
+            layoutKey={gamesFluidLayoutKey}
+            title="Patrocinado para jogadores"
+            description="Bloco responsivo exibido entre os mini jogos para reforçar a monetização da área de jogos."
+            minHeight={180}
+          />
         </div>
 
         <div className="glass-card p-4 text-center" style={{ animation: 'slide-up 0.5s cubic-bezier(0.16,1,0.3,1) backwards', animationDelay: '300ms' }}>
